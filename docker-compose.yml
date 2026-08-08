@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: meeting-notes-app
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_MODEL=llama3.2:3b
+      - OLLAMA_URL=http://ollama:11434/api/generate
+      - WHISPER_MODEL_SIZE=base
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama_data:

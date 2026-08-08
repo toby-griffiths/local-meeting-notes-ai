@@ -3,7 +3,12 @@ Live meeting audio capture: mic + system loopback, mixed into one stream.
 Uses PyAudioWPatch for WASAPI loopback support on Windows.
 """
 
-import pyaudiowpatch as pyaudio
+try:
+    import pyaudiowpatch as pyaudio
+    PYAUDIO_AVAILABLE = True
+except ImportError:
+    PYAUDIO_AVAILABLE = False
+
 import numpy as np
 from scipy.signal import resample
 import wave
@@ -11,12 +16,14 @@ import threading
 import tempfile
 
 CHUNK = 1024
-FORMAT = pyaudio.paInt16
+FORMAT = pyaudio.paInt16 if PYAUDIO_AVAILABLE else None
 TARGET_RATE = 16000  # Whisper wants 16kHz
 
 
 class MeetingRecorder:
     def __init__(self):
+        if not PYAUDIO_AVAILABLE:
+            raise RuntimeError("Live audio capture requires PyAudioWPatch (Windows-only).")
         self.p = pyaudio.PyAudio()
         self.recording = False
         self.mic_frames = []
@@ -121,7 +128,6 @@ class MeetingRecorder:
         """Convert interleaved multi-channel int16 audio to mono by averaging channels."""
         audio = np.frombuffer(raw_bytes, dtype=np.int16).astype(np.float32)
         if channels > 1:
-            # Trim to a multiple of `channels`, reshape, average across channels
             usable_len = (len(audio) // channels) * channels
             audio = audio[:usable_len].reshape(-1, channels).mean(axis=1)
         return audio

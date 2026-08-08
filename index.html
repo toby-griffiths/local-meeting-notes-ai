@@ -3,573 +3,819 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Notepad — Local AI Meeting Notes</title>
+<title>HearlyAI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --paper: #F5F3EE;
-    --paper-raised: #FFFFFF;
-    --ink: #1C1B19;
-    --ink-soft: #55524A;
-    --muted: #8B8579;
-    --moss: #3A5A40;
-    --moss-deep: #2A4330;
-    --moss-tint: #E8EDE6;
-    --line: #DDD8CC;
-    --rec: #C4453A;
-    --rec-tint: #FBEAE8;
-    --radius: 10px;
+  :root{
+    --bg:#f7f3ec;
+    --surface:#fffdf8;
+    --surface-2:#ffffff;
+    --border:#e9e2d3;
+    --border-2:#ddd4c0;
+    --text:#2b2620;
+    --text-dim:#797264;
+    --text-faint:#a89f8f;
+    --accent:#5c7a63;
+    --accent-dim:#e6ede7;
+    --accent-line:#b9cabd;
+    --warn:#b9793f;
+    --warn-dim:#f4e9dc;
+    --danger:#a8543f;
+    --danger-dim:#f3e2dc;
+    --radius:16px;
+    --radius-sm:10px;
+    --serif:'Fraunces',serif;
+    --sans:'Inter',sans-serif;
+    --shadow:0 1px 2px rgba(43,38,32,.04), 0 8px 24px -8px rgba(43,38,32,.08);
+    --shadow-lift:0 4px 8px rgba(43,38,32,.05), 0 16px 40px -12px rgba(43,38,32,.14);
   }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; }
-  body {
-    font-family: 'Inter', -apple-system, sans-serif;
-    background: var(--paper);
-    margin: 0;
-    color: var(--ink);
-    -webkit-font-smoothing: antialiased;
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);color:var(--text);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; height:100vh; overflow:hidden;
   }
-  h1, h2, .serif { font-family: 'Source Serif 4', Georgia, serif; }
-  .mono { font-family: 'IBM Plex Mono', monospace; }
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea{font-family:inherit;}
+  ::selection{background:var(--accent-dim);}
 
-  .layout { display: flex; height: 100vh; }
+  /* ---------- APP SHELL ---------- */
+  .app{display:grid;grid-template-columns:264px 1fr;height:100vh;}
+  @media (max-width:860px){ .app{grid-template-columns:0 1fr;} .sidebar{position:fixed;left:-264px;transition:left .25s;z-index:50;height:100vh;} .sidebar.open{left:0;} }
 
-  /* ---------- Sidebar ---------- */
-  .sidebar {
-    width: 280px; flex-shrink: 0;
-    background: var(--paper-raised);
-    border-right: 1px solid var(--line);
-    display: flex; flex-direction: column;
+  /* ---------- SIDEBAR ---------- */
+  .sidebar{
+    background:var(--surface);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;padding:22px 16px;
   }
-  .sidebar-header { padding: 22px 20px 14px; border-bottom: 1px solid var(--line); }
-  .brand { display: flex; align-items: baseline; gap: 8px; }
-  .brand-mark {
-    width: 9px; height: 9px; border-radius: 2px;
-    background: var(--moss); transform: rotate(45deg);
-    flex-shrink: 0;
-  }
-  .brand h1 { font-size: 19px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
-  .brand-sub { font-size: 12px; color: var(--muted); margin: 4px 0 0 17px; }
+  .logo{display:flex;align-items:center;gap:10px;padding:6px 8px 22px;font-family:var(--serif);font-size:19px;font-weight:500;}
+  .logo-mark{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%, #d8e8db, var(--accent) 65%);box-shadow:0 2px 8px rgba(92,122,99,.35);flex-shrink:0;}
 
-  .search-wrap { padding: 14px 16px; border-bottom: 1px solid var(--line); }
-  .search-wrap input {
-    width: 100%; padding: 8px 12px; font-size: 13px;
-    border: 1px solid var(--line); border-radius: 7px;
-    background: var(--paper); font-family: inherit; color: var(--ink);
+  .nav{display:flex;flex-direction:column;gap:2px;margin-bottom:22px;}
+  .nav-item{
+    display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;
+    font-size:14px;color:var(--text-dim);font-weight:500;transition:background .15s,color .15s;
   }
-  .search-wrap input:focus { outline: 2px solid var(--moss); outline-offset: 1px; }
-  .search-wrap input::placeholder { color: var(--muted); }
+  .nav-item:hover{background:var(--accent-dim);color:var(--text);}
+  .nav-item.active{background:var(--accent-dim);color:var(--accent);}
+  .nav-ico{width:17px;height:17px;flex-shrink:0;opacity:.85;}
 
-  .sidebar-list { flex: 1; overflow-y: auto; padding: 10px 12px; }
-  .sidebar-eyebrow {
-    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--muted); font-weight: 600; margin: 8px 8px 8px;
-  }
-  .meeting-item {
-    padding: 10px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 2px;
-    border: 1px solid transparent;
-  }
-  .meeting-item:hover { background: var(--paper); }
-  .meeting-item.active { background: var(--moss-tint); border-color: #cfe0ce; }
-  .meeting-item-date { color: var(--muted); font-size: 11px; margin-bottom: 3px; }
-  .meeting-item-preview { color: var(--ink); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .empty-sidebar { color: var(--muted); font-size: 13px; font-style: italic; padding: 8px; }
+  .sb-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);font-weight:600;padding:0 12px;margin:6px 0 8px;}
+  .sb-meetings{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-right:2px;}
+  .sb-meeting{padding:9px 12px;border-radius:10px;cursor:pointer;transition:background .15s;}
+  .sb-meeting:hover{background:var(--accent-dim);}
+  .sb-meeting.active{background:var(--accent-dim);}
+  .sb-mtitle{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sb-mdate{font-size:11px;color:var(--text-faint);margin-top:2px;}
+  .sb-empty{padding:12px;font-size:12.5px;color:var(--text-faint);font-style:italic;}
 
-  /* ---------- Main ---------- */
-  .main { flex: 1; overflow-y: auto; }
-  .topbar {
-    position: sticky; top: 0; z-index: 5;
-    background: var(--paper); border-bottom: 1px solid var(--line);
-    padding: 20px 40px; display: flex; align-items: center; justify-content: space-between;
+  .sb-footer{border-top:1px solid var(--border);padding-top:14px;margin-top:12px;}
+  .privacy-status{
+    display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);
+    padding:9px 12px;border-radius:10px;background:var(--accent-dim);cursor:pointer;
   }
-  .topbar-title h2 { font-size: 21px; margin: 0 0 3px; font-weight: 600; }
-  .topbar-title .status-line { font-size: 13px; color: var(--muted); }
+  .privacy-status .pdot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
 
-  .rec-cluster { display: flex; align-items: center; gap: 14px; }
-  .meter { display: none; align-items: flex-end; gap: 3px; height: 18px; }
-  .meter.live { display: flex; }
-  .meter span {
-    width: 3px; background: var(--rec); border-radius: 2px;
-    animation: bounce 0.9s ease-in-out infinite;
-  }
-  .meter span:nth-child(1) { animation-delay: -0.6s; }
-  .meter span:nth-child(2) { animation-delay: -0.3s; }
-  .meter span:nth-child(3) { animation-delay: -0.9s; }
-  .meter span:nth-child(4) { animation-delay: -0.15s; }
-  @keyframes bounce {
-    0%, 100% { height: 4px; }
-    50% { height: 18px; }
-  }
-  .timer { font-size: 13px; color: var(--rec); display: none; letter-spacing: 0.02em; }
-  .timer.live { display: inline; }
+  /* ---------- MAIN ---------- */
+  .main{overflow-y:auto;height:100vh;}
+  .view{display:none;padding:44px 52px 80px;max-width:1080px;}
+  .view.active{display:block;}
+  @media (max-width:640px){ .view{padding:28px 20px 60px;} }
+  .mobile-bar{display:none;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface);}
+  @media (max-width:860px){ .mobile-bar{display:flex;} }
+  .hamburger{width:34px;height:34px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface-2);display:flex;align-items:center;justify-content:center;}
 
-  .btn-row { display: flex; gap: 8px; }
-  button {
-    font-family: inherit; font-size: 13.5px; font-weight: 500;
-    border-radius: 8px; border: 1px solid transparent; cursor: pointer;
-    padding: 9px 16px; transition: background 0.12s, border-color 0.12s;
-  }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
-  button:focus-visible { outline: 2px solid var(--moss); outline-offset: 2px; }
-  .btn-primary { background: var(--moss); color: white; }
-  .btn-primary:hover:not(:disabled) { background: var(--moss-deep); }
-  .btn-stop { background: var(--rec); color: white; }
-  .btn-stop:hover:not(:disabled) { background: #a83a30; }
-  .btn-ghost { background: var(--paper-raised); color: var(--ink); border-color: var(--line); }
-  .btn-ghost:hover:not(:disabled) { background: var(--paper); }
-  .btn-ghost.small { padding: 7px 12px; font-size: 12.5px; }
+  .greeting{font-family:var(--serif);font-size:15px;color:var(--text-dim);margin-bottom:6px;}
+  .headline{font-family:var(--serif);font-size:clamp(28px,3.6vw,38px);font-weight:500;line-height:1.15;margin-bottom:36px;}
 
-  .content { max-width: 780px; margin: 0 auto; padding: 28px 40px 60px; }
+  /* recording card */
+  .rec-card{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:20px;
+    padding:36px;box-shadow:var(--shadow);position:relative;overflow:hidden;margin-bottom:40px;
+  }
+  .rec-card::before{
+    content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;
+    background:radial-gradient(circle, var(--accent-dim), transparent 70%);
+  }
+  .rec-head{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;margin-bottom:22px;flex-wrap:wrap;gap:14px;}
+  .rec-title{font-family:var(--serif);font-size:20px;font-weight:500;}
+  .rec-sub{font-size:13px;color:var(--text-dim);margin-top:4px;}
+  .status-pill{
+    display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-dim);
+    background:var(--bg);border:1px solid var(--border);padding:6px 12px;border-radius:100px;
+  }
+  .status-pill .sdot{width:6px;height:6px;border-radius:50%;background:#c9633f;animation:blink 1.3s ease-in-out infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-  /* Empty state */
-  .empty-state {
-    text-align: center; padding: 70px 20px; color: var(--muted);
-  }
-  .empty-state .glyph { font-size: 28px; margin-bottom: 14px; }
-  .empty-state h3 { font-family: 'Source Serif 4', serif; font-size: 19px; color: var(--ink); margin: 0 0 8px; font-weight: 600; }
-  .empty-state p { font-size: 13.5px; max-width: 340px; margin: 0 auto; line-height: 1.6; }
+  .wave-row{display:flex;align-items:center;gap:3px;height:44px;margin:6px 0 24px;position:relative;z-index:1;}
+  .wave-row span{width:3px;border-radius:2px;background:var(--accent);opacity:.55;transition:height .12s ease;}
 
-  /* Tabs */
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
-  .tab {
-    background: none; border: none; border-radius: 0; padding: 10px 4px; margin-right: 20px;
-    font-size: 13.5px; font-weight: 500; color: var(--muted); cursor: pointer;
-    border-bottom: 2px solid transparent; position: relative; top: 1px;
+  .rec-actions{display:flex;gap:12px;position:relative;z-index:1;flex-wrap:wrap;align-items:center;}
+  .btn{
+    padding:12px 22px;border-radius:100px;font-size:14px;font-weight:600;border:none;
+    transition:transform .15s, box-shadow .15s, background .15s;
   }
-  .tab.active { color: var(--moss-deep); border-bottom-color: var(--moss); }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 20px -6px rgba(92,122,99,.5);}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-danger:hover{transform:translateY(-1px);box-shadow:0 8px 20px -6px rgba(168,84,63,.4);}
+  .btn-ghost{background:transparent;border:1px solid var(--border-2);color:var(--text);}
+  .btn-ghost:hover{background:var(--surface);border-color:var(--accent-line);}
+  .btn-sm{padding:8px 16px;font-size:13px;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none !important;box-shadow:none !important;}
+  .file-input{display:none;}
+  .rec-hint{font-size:12px;color:var(--text-faint);margin-top:14px;position:relative;z-index:1;}
 
-  /* Notes sections */
-  .note-section { margin-bottom: 22px; }
-  .note-section-label {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
-    color: var(--moss-deep); font-weight: 600; margin-bottom: 10px;
-    display: flex; align-items: center; gap: 7px;
-  }
-  .note-section-label::before { content: ''; width: 5px; height: 5px; background: var(--moss); border-radius: 1px; transform: rotate(45deg); }
-  .note-body { font-size: 15px; line-height: 1.65; color: var(--ink); }
-  .note-body p { margin: 0 0 8px; }
-  .note-list { list-style: none; margin: 0; padding: 0; }
-  .note-list li {
-    padding: 8px 0 8px 26px; position: relative; font-size: 14.5px; line-height: 1.55;
-    border-bottom: 1px solid #EEEBE3;
-  }
-  .note-list li:last-child { border-bottom: none; }
-  .note-list.checklist li::before {
-    content: ''; position: absolute; left: 0; top: 11px;
-    width: 14px; height: 14px; border: 1.5px solid var(--moss); border-radius: 4px;
-  }
-  .note-list.plain li::before {
-    content: '—'; position: absolute; left: 0; color: var(--muted);
-  }
-  .note-none { color: var(--muted); font-style: italic; font-size: 13.5px; }
+  /* section label */
+  .sec-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--text-faint);margin:36px 0 14px;}
+  .sec-label:first-child{margin-top:0;}
 
-  .transcript-text {
-    font-size: 14px; line-height: 1.75; color: var(--ink-soft);
-    background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 20px 22px; white-space: pre-wrap;
+  /* meeting list */
+  .m-card{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:20px 22px;
+    margin-bottom:12px;cursor:pointer;transition:box-shadow .15s, transform .15s;
   }
+  .m-card:hover{box-shadow:var(--shadow-lift);transform:translateY(-1px);}
+  .m-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;}
+  .m-title{font-family:var(--serif);font-size:17px;font-weight:500;}
+  .m-date{font-size:12px;color:var(--text-faint);white-space:nowrap;}
+  .m-preview{font-size:13.5px;color:var(--text-dim);margin-top:8px;line-height:1.55;}
+  .m-tags{display:flex;gap:8px;margin-top:12px;}
+  .m-tag{font-size:11px;color:var(--accent);background:var(--accent-dim);padding:3px 10px;border-radius:100px;font-weight:500;}
 
-  /* Ask */
-  .qa-pair { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
-  .qa-pair:last-child { border: none; margin: 0; padding: 0; }
-  .qa-question { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
-  .qa-question::before { content: 'Q · '; color: var(--moss); }
-  .qa-answer { color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
-  .chat-row { display: flex; gap: 8px; margin-top: 18px; }
-  #questionInput {
-    flex: 1; padding: 11px 14px; border: 1px solid var(--line); border-radius: 8px;
-    font-size: 14px; font-family: inherit; background: var(--paper-raised);
+  /* meeting detail */
+  .detail-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:16px;flex-wrap:wrap;}
+  .back-link{font-size:13px;color:var(--text-dim);margin-bottom:16px;display:inline-flex;align-items:center;gap:6px;}
+  .back-link:hover{color:var(--accent);}
+  .detail-title{font-family:var(--serif);font-size:28px;font-weight:500;}
+  .detail-meta{font-size:13px;color:var(--text-faint);margin-top:6px;}
+  .detail-btns{display:flex;gap:8px;flex-wrap:wrap;}
+
+  .detail-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:26px;margin-top:28px;align-items:stretch;}
+  @media (max-width:900px){ .detail-grid{grid-template-columns:1fr;} }
+
+  .panel{background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:26px 28px;}
+  .panel-title{font-family:var(--serif);font-size:16px;font-weight:500;margin-bottom:16px;}
+  .transcript-text{font-size:14px;line-height:1.85;color:var(--text-dim);white-space:pre-wrap;max-height:520px;overflow-y:auto;}
+
+  .note-sec{margin-bottom:22px;}
+  .note-sec:last-child{margin-bottom:0;}
+  .note-sec-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:600;margin-bottom:8px;}
+  .note-sec-body{font-size:14px;line-height:1.65;color:var(--text);white-space:pre-wrap;}
+  .note-sec-body.empty{color:var(--text-faint);font-style:italic;}
+  .notes-empty-all{font-size:13px;color:var(--text-faint);font-style:italic;padding:6px 0;}
+
+  /* ask */
+  .ask-box{margin-top:22px;}
+  .chat-log{display:flex;flex-direction:column;gap:14px;margin-bottom:16px;max-height:280px;overflow-y:auto;}
+  .msg{max-width:88%;}
+  .msg.user{align-self:flex-end;}
+  .bubble{padding:11px 15px;border-radius:14px;font-size:13.5px;line-height:1.6;}
+  .msg.user .bubble{background:var(--bg);border:1px solid var(--border);}
+  .msg.ai .bubble{background:var(--accent-dim);border:1px solid var(--accent-line);}
+  .grounded{font-size:11px;color:var(--accent);margin-top:6px;display:flex;align-items:center;gap:6px;}
+  .grounded::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);}
+  .ask-input-row{display:flex;gap:8px;}
+  .ask-input{flex:1;padding:11px 15px;border:1px solid var(--border-2);border-radius:100px;font-size:13.5px;background:var(--bg);}
+  .ask-input:focus{outline:none;border-color:var(--accent-line);}
+
+  /* search view */
+  .search-hero{text-align:center;padding:20px 0 40px;}
+  .search-input-wrap{max-width:560px;margin:0 auto;position:relative;}
+  .search-input{
+    width:100%;padding:16px 22px;border:1px solid var(--border-2);border-radius:100px;
+    font-size:15px;background:var(--surface-2);box-shadow:var(--shadow);
   }
-  #questionInput:focus { outline: 2px solid var(--moss); outline-offset: 1px; }
-  #questionInput:disabled { background: var(--paper); }
+  .search-input:focus{outline:none;border-color:var(--accent-line);}
+  .search-status{font-size:13px;color:var(--text-dim);text-align:center;margin:20px 0;}
+  .answer-card{background:var(--surface-2);border:1px solid var(--accent-line);border-radius:16px;padding:22px 26px;margin-bottom:22px;}
+  .answer-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:600;margin-bottom:10px;}
+  .answer-text{font-size:15px;line-height:1.7;}
+  .sources-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .source-chip{font-size:12px;color:var(--text-dim);background:var(--bg);border:1px solid var(--border);padding:5px 12px;border-radius:100px;}
 
-  #fileInput { display: none; }
+  /* followups */
+  .fu-card{background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:22px 24px;margin-bottom:14px;}
+  .fu-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:10px;}
+  .fu-item{font-family:var(--serif);font-size:16px;font-weight:500;}
+  .badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:100px;white-space:nowrap;}
+  .badge.recurring{color:var(--warn);background:var(--warn-dim);}
+  .badge.new{color:var(--accent);background:var(--accent-dim);}
+  .fu-note{font-size:13px;color:var(--text-dim);}
+  .fu-msg{font-size:13.5px;color:var(--text-dim);line-height:1.6;border-top:1px solid var(--border);padding-top:14px;margin-top:14px;}
 
-  ::-webkit-scrollbar { width: 10px; }
-  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+  /* actions */
+  .actions-tabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;}
+  .atab{font-size:13px;padding:8px 16px;border-radius:100px;border:1px solid var(--border-2);color:var(--text-dim);}
+  .atab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .action-card{background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:14px;}
+  .action-type-row{display:flex;align-items:center;gap:9px;margin-bottom:12px;}
+  .action-icon{width:26px;height:26px;border-radius:8px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:13px;}
+  .action-type-label{font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;}
+  .action-orig{font-size:12px;color:var(--text-faint);margin-bottom:12px;}
+  .action-body{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13.5px;line-height:1.6;margin-bottom:14px;white-space:pre-wrap;}
+  .action-btns{display:flex;gap:8px;}
 
-  @media (prefers-reduced-motion: reduce) {
-    .meter span { animation: none; height: 10px; }
+  /* empty state */
+  .empty{text-align:center;padding:70px 30px;}
+  .empty-icon{width:56px;height:56px;border-radius:50%;margin:0 auto 22px;background:radial-gradient(circle at 35% 30%, #d8e8db, var(--accent) 70%);box-shadow:0 4px 20px rgba(92,122,99,.3);}
+  .empty h3{font-family:var(--serif);font-size:21px;font-weight:500;margin-bottom:8px;}
+  .empty p{font-size:13.5px;color:var(--text-dim);max-width:340px;margin:0 auto 22px;}
+  .empty-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--text);color:var(--bg);padding:12px 22px;border-radius:100px;font-size:13px;
+    opacity:0;transition:opacity .25s, transform .25s;z-index:200;pointer-events:none;
   }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-  @media (max-width: 720px) {
-    .sidebar { position: fixed; z-index: 20; height: 100%; transform: translateX(-100%); transition: transform 0.2s; }
-    .sidebar.open { transform: translateX(0); }
-    .topbar, .content { padding-left: 20px; padding-right: 20px; }
-  }
+  .skel{background:linear-gradient(90deg, var(--border) 0%, var(--surface-2) 50%, var(--border) 100%);background-size:200% 100%;animation:shimmer 1.4s ease infinite;border-radius:8px;}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 </style>
 </head>
 <body>
 
-<div class="layout">
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="logo"><span class="logo-mark"></span>HearlyAI</div>
 
-  <div class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="brand"><span class="brand-mark"></span><h1>Notepad</h1></div>
-      <div class="brand-sub">Local AI meeting notes</div>
+    <div class="nav">
+      <div class="nav-item active" data-view="home"><span class="nav-ico">◆</span>Home</div>
+      <div class="nav-item" data-view="meetings"><span class="nav-ico">▤</span>Meetings</div>
+      <div class="nav-item" data-view="search"><span class="nav-ico">◎</span>Search</div>
+      <div class="nav-item" data-view="actions"><span class="nav-ico">✓</span>Actions</div>
     </div>
-    <div class="search-wrap">
-      <input type="text" id="searchInput" placeholder="Search past meetings...">
-    </div>
-    <div class="sidebar-list">
-      <div class="sidebar-eyebrow">Past Meetings</div>
-      <div id="meetingList"><span class="empty-sidebar">Nothing recorded yet.</span></div>
-    </div>
-  </div>
 
+    <div class="sb-label">Recent Meetings</div>
+    <div class="sb-meetings" id="sbMeetings">
+      <div class="sb-empty">No meetings yet</div>
+    </div>
+
+    <div class="sb-footer">
+      <div class="privacy-status" title="HearlyAI processes everything locally on this device."><span class="pdot"></span>Local AI · data stays here</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
   <div class="main">
-    <div class="topbar">
-      <div class="topbar-title">
-        <h2 id="topTitle">New meeting</h2>
-        <div class="status-line" id="status">Start a call, then click "Start Meeting."</div>
-      </div>
-      <div class="rec-cluster">
-        <div class="meter" id="meter"><span></span><span></span><span></span><span></span></div>
-        <span class="timer mono" id="timer">00:00</span>
-        <div class="btn-row">
-          <button class="btn-primary" id="recordBtn">● Start Meeting</button>
-          <button class="btn-stop" id="stopBtn" disabled>Stop &amp; Process</button>
-          <button class="btn-ghost small" id="newBtn">+ New</button>
-          <button class="btn-ghost small" id="uploadBtn">Upload file</button>
-          <input type="file" id="fileInput" accept="audio/*">
-        </div>
-      </div>
+    <div class="mobile-bar">
+      <div class="hamburger" id="hamburger">☰</div>
+      <div class="logo" style="padding:0;font-size:16px;"><span class="logo-mark" style="width:18px;height:18px;"></span>HearlyAI</div>
     </div>
 
-    <div class="content">
+    <!-- HOME -->
+    <section class="view active" id="view-home">
+      <div class="greeting" id="greetingText">Good to see you</div>
+      <div class="headline">What would you like to remember?</div>
 
-      <div id="emptyState" class="empty-state">
-        <div class="glyph serif">§</div>
-        <h3>Nothing here yet</h3>
-        <p>Join your call as usual, then click "Start Meeting." Notepad listens to your mic and your speakers together, and writes it all up when you're done.</p>
+      <div class="rec-card">
+        <div class="rec-head">
+          <div>
+            <div class="rec-title" id="recTitle">Start a meeting</div>
+            <div class="rec-sub" id="recSub">Captures your microphone and system audio together.</div>
+          </div>
+          <div class="status-pill" id="statusPill" style="display:none;"><span class="sdot"></span><span id="recTimer">00:00</span></div>
+        </div>
+
+        <div class="wave-row" id="waveRow"></div>
+
+        <div class="rec-actions">
+          <button class="btn btn-primary" id="startBtn">Start Recording</button>
+          <button class="btn btn-danger" id="stopBtn" style="display:none;">Stop Recording</button>
+          <button class="btn btn-ghost" id="uploadBtn">Upload Recording</button>
+          <input type="file" id="fileInput" class="file-input" accept="audio/*,video/*">
+        </div>
+        <div class="rec-hint" id="recHint"></div>
       </div>
 
-      <div id="meetingView" style="display:none;">
-        <div class="tabs">
-          <button class="tab active" data-tab="notes">Notes</button>
-          <button class="tab" data-tab="transcript">Transcript</button>
-          <button class="tab" data-tab="ask">Ask</button>
+      <div class="sec-label">Recent Meetings</div>
+      <div id="homeRecent"></div>
+    </section>
+
+    <!-- MEETINGS -->
+    <section class="view" id="view-meetings">
+      <div class="headline">Meetings</div>
+      <div id="meetingsList"></div>
+    </section>
+
+    <!-- MEETING DETAIL -->
+    <section class="view" id="view-detail">
+      <div class="back-link" id="backToMeetings">← Back to meetings</div>
+      <div class="detail-top">
+        <div>
+          <div class="detail-title" id="detailTitle">—</div>
+          <div class="detail-meta" id="detailMeta">—</div>
+        </div>
+        <div class="detail-btns">
+          <button class="btn btn-ghost btn-sm" id="followupBtn">Check Follow-ups</button>
+          <button class="btn btn-ghost btn-sm" id="actionsGenBtn">Generate Actions</button>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="panel">
+          <div class="panel-title">Transcript</div>
+          <div class="transcript-text" id="detailTranscript">—</div>
         </div>
 
-        <div class="tab-panel active" id="panel-notes">
-          <div id="notesSections"></div>
-        </div>
+        <div>
+          <div class="panel">
+            <div class="panel-title">AI Notes</div>
+            <div id="detailNotes"></div>
+          </div>
 
-        <div class="tab-panel" id="panel-transcript">
-          <div class="transcript-text" id="transcript">Transcript will appear here.</div>
-        </div>
+          <div class="panel ask-box">
+            <div class="panel-title">Ask Hearly</div>
+            <div class="chat-log" id="chatLog"></div>
+            <div class="ask-input-row">
+              <input type="text" class="ask-input" id="askInput" placeholder="What did we decide about…">
+              <button class="btn btn-primary btn-sm" id="askBtn">Ask</button>
+            </div>
+          </div>
 
-        <div class="tab-panel" id="panel-ask">
-          <div id="chatHistory"></div>
-          <div class="chat-row">
-            <input type="text" id="questionInput" placeholder="e.g. What did we decide about the vendor?">
-            <button class="btn-primary" id="askBtn">Ask</button>
+          <div class="panel" id="followupPanel" style="display:none;margin-top:20px;">
+            <div class="panel-title">Follow-up Intelligence</div>
+            <div id="followupResults"></div>
           </div>
         </div>
       </div>
+    </section>
 
-    </div>
+    <!-- SEARCH -->
+    <section class="view" id="view-search">
+      <div class="search-hero">
+        <div class="headline" style="margin-bottom:20px;">Search your memory</div>
+        <div class="search-input-wrap">
+          <input type="text" class="search-input" id="searchInput" placeholder="What did we discuss about…">
+        </div>
+      </div>
+      <div id="searchResults"></div>
+    </section>
+
+    <!-- ACTIONS -->
+    <section class="view" id="view-actions">
+      <div class="headline">Action Center</div>
+      <div class="actions-tabs">
+        <div class="atab active" data-type="all">All</div>
+        <div class="atab" data-type="email">Email</div>
+        <div class="atab" data-type="calendar_event">Calendar</div>
+        <div class="atab" data-type="task">Task</div>
+      </div>
+      <div id="actionsResults">
+        <div class="empty">
+          <div class="empty-icon"></div>
+          <h3>No actions generated yet</h3>
+          <p>Open a meeting and click "Generate Actions" to see suggested emails, events, and tasks here.</p>
+        </div>
+      </div>
+    </section>
   </div>
-
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 const API = "http://localhost:8000";
-
-let currentTranscript = "";
-let activeMeetingId = null;
 let allMeetings = [];
-let timerInterval = null;
-let recordStartTime = null;
+let currentMeeting = null;
+let recordTimerInterval = null;
+let recordSeconds = 0;
 
-const recordBtn = document.getElementById("recordBtn");
-const stopBtn = document.getElementById("stopBtn");
-const newBtn = document.getElementById("newBtn");
-const uploadBtn = document.getElementById("uploadBtn");
-const fileInput = document.getElementById("fileInput");
-const meter = document.getElementById("meter");
-const timerEl = document.getElementById("timer");
-const status = document.getElementById("status");
-const topTitle = document.getElementById("topTitle");
-const transcriptBox = document.getElementById("transcript");
-const notesSections = document.getElementById("notesSections");
-const emptyState = document.getElementById("emptyState");
-const meetingView = document.getElementById("meetingView");
-const questionInput = document.getElementById("questionInput");
-const askBtn = document.getElementById("askBtn");
-const chatHistory = document.getElementById("chatHistory");
-const meetingList = document.getElementById("meetingList");
-const searchInput = document.getElementById("searchInput");
-
-// ---------- Tabs ----------
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-    tab.classList.add("active");
-    document.getElementById(`panel-${tab.dataset.tab}`).classList.add("active");
+// ---------- utils ----------
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2600);
+}
+function fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' · ' + d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+}
+function relDate(iso){
+  const d = new Date(iso), now = new Date();
+  const diffDays = Math.floor((now - d) / 86400000);
+  if(diffDays === 0) return 'Today';
+  if(diffDays === 1) return 'Yesterday';
+  if(diffDays < 7) return diffDays + ' days ago';
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+}
+function parseNotes(raw){
+  // Parses the SUMMARY / KEY DECISIONS / ACTION ITEMS / FOLLOW-UP TASKS text block
+  const sections = {SUMMARY:'', 'KEY DECISIONS':'', 'ACTION ITEMS':'', 'FOLLOW-UP TASKS':''};
+  const labels = Object.keys(sections);
+  let current = null;
+  (raw||'').split('\n').forEach(line=>{
+    const hit = labels.find(l => line.trim().toUpperCase().startsWith(l + ':'));
+    if(hit){ current = hit; sections[current] += line.trim().slice(hit.length+1).trim() + '\n'; }
+    else if(current){ sections[current] += line + '\n'; }
   });
-});
-
-// ---------- Recording ----------
-function startTimer() {
-  recordStartTime = Date.now();
-  timerEl.classList.add("live");
-  timerInterval = setInterval(() => {
-    const secs = Math.floor((Date.now() - recordStartTime) / 1000);
-    const m = String(Math.floor(secs / 60)).padStart(2, "0");
-    const s = String(secs % 60).padStart(2, "0");
-    timerEl.textContent = `${m}:${s}`;
-  }, 500);
-}
-function stopTimer() {
-  clearInterval(timerInterval);
-  timerEl.classList.remove("live");
-  timerEl.textContent = "00:00";
-}
-
-recordBtn.addEventListener("click", async () => {
-  try {
-    const response = await fetch(`${API}/start-meeting`, { method: "POST" });
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.detail || "Couldn't start recording.");
-    }
-    status.textContent = "Recording — listening to mic and system audio.";
-    topTitle.textContent = "Recording in progress";
-    meter.classList.add("live");
-    startTimer();
-    recordBtn.disabled = true;
-    stopBtn.disabled = false;
-    newBtn.disabled = true;
-    uploadBtn.disabled = true;
-  } catch (err) {
-    status.textContent = err.message;
-    console.error(err);
-  }
-});
-
-stopBtn.addEventListener("click", async () => {
-  stopBtn.disabled = true;
-  meter.classList.remove("live");
-  stopTimer();
-  status.textContent = "Transcribing and structuring notes, locally...";
-  topTitle.textContent = "Processing";
-
-  try {
-    const response = await fetch(`${API}/stop-meeting`, { method: "POST" });
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.detail || "Couldn't process the meeting.");
-    }
-    const data = await response.json();
-    showMeeting(data);
-    status.textContent = "Done.";
-    loadMeetingList();
-  } catch (err) {
-    status.textContent = err.message;
-    topTitle.textContent = "New meeting";
-    console.error(err);
-  }
-
-  recordBtn.disabled = false;
-  newBtn.disabled = false;
-  uploadBtn.disabled = false;
-});
-
-uploadBtn.addEventListener("click", () => fileInput.click());
-
-fileInput.addEventListener("change", async () => {
-  const file = fileInput.files[0];
-  if (!file) return;
-
-  status.textContent = "Uploading and transcribing, locally...";
-  topTitle.textContent = "Processing";
-  recordBtn.disabled = true;
-  uploadBtn.disabled = true;
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  try {
-    const response = await fetch(`${API}/process-meeting`, { method: "POST", body: formData });
-    const data = await response.json();
-    showMeeting(data);
-    status.textContent = "Done.";
-    loadMeetingList();
-  } catch (err) {
-    status.textContent = "Couldn't reach the backend — check the server is running.";
-    console.error(err);
-  }
-
-  recordBtn.disabled = false;
-  uploadBtn.disabled = false;
-  fileInput.value = "";
-});
-
-newBtn.addEventListener("click", () => {
-  activeMeetingId = null;
-  currentTranscript = "";
-  emptyState.style.display = "block";
-  meetingView.style.display = "none";
-  chatHistory.innerHTML = "";
-  status.textContent = 'Start a call, then click "Start Meeting."';
-  topTitle.textContent = "New meeting";
-  highlightActiveMeeting();
-});
-
-// ---------- Rendering ----------
-function parseStructuredNotes(text) {
-  const sections = { summary: "", decisions: [], actions: [], followups: [] };
-  if (!text) return sections;
-
-  const grab = (label, nextLabels) => {
-    const pattern = new RegExp(`${label}:([\\s\\S]*?)(?:${nextLabels.join("|")}|$)`, "i");
-    const match = text.match(pattern);
-    return match ? match[1].trim() : "";
-  };
-
-  sections.summary = grab("SUMMARY", ["KEY DECISIONS", "ACTION ITEMS", "FOLLOW-UP TASKS"]);
-  const decisionsRaw = grab("KEY DECISIONS", ["ACTION ITEMS", "FOLLOW-UP TASKS"]);
-  const actionsRaw = grab("ACTION ITEMS", ["FOLLOW-UP TASKS"]);
-  const followupsRaw = grab("FOLLOW-UP TASKS", ["$^"]);
-
-  const toList = (raw) => raw
-    .split("\n")
-    .map(l => l.replace(/^[-•*]\s*/, "").trim())
-    .filter(l => l.length > 0 && !/^none noted$/i.test(l));
-
-  sections.decisions = toList(decisionsRaw);
-  sections.actions = toList(actionsRaw);
-  sections.followups = toList(followupsRaw);
   return sections;
 }
 
-function renderNotes(rawNotes) {
-  const s = parseStructuredNotes(rawNotes);
-  notesSections.innerHTML = "";
+// ---------- greeting ----------
+(function setGreeting(){
+  const h = new Date().getHours();
+  document.getElementById('greetingText').textContent =
+    h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+})();
 
-  const addSection = (label, bodyHtml) => {
-    const div = document.createElement("div");
-    div.className = "note-section";
-    div.innerHTML = `<div class="note-section-label">${label}</div>${bodyHtml}`;
-    notesSections.appendChild(div);
-  };
-
-  addSection("Summary", `<div class="note-body"><p>${s.summary || '<span class="note-none">Not enough was said to summarize.</span>'}</p></div>`);
-
-  addSection("Key Decisions", s.decisions.length
-    ? `<ul class="note-list plain">${s.decisions.map(d => `<li>${d}</li>`).join("")}</ul>`
-    : `<div class="note-none">No decisions were noted.</div>`);
-
-  addSection("Action Items", s.actions.length
-    ? `<ul class="note-list checklist">${s.actions.map(a => `<li>${a}</li>`).join("")}</ul>`
-    : `<div class="note-none">Nothing was assigned.</div>`);
-
-  addSection("Follow-up", s.followups.length
-    ? `<ul class="note-list plain">${s.followups.map(f => `<li>${f}</li>`).join("")}</ul>`
-    : `<div class="note-none">Nothing left open.</div>`);
+// ---------- nav ----------
+document.querySelectorAll('.nav-item').forEach(item=>{
+  item.addEventListener('click', ()=> showView(item.dataset.view));
+});
+document.getElementById('backToMeetings').addEventListener('click', ()=> showView('meetings'));
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const target = document.getElementById('view-' + name);
+  if(target) target.classList.add('active');
+  const nav = document.querySelector(`.nav-item[data-view="${name}"]`);
+  if(nav) nav.classList.add('active');
+  document.getElementById('sidebar').classList.remove('open');
 }
-
-function showMeeting(meeting) {
-  emptyState.style.display = "none";
-  meetingView.style.display = "block";
-  renderNotes(meeting.structured_notes);
-  transcriptBox.textContent = meeting.transcript || "(no transcript)";
-  currentTranscript = meeting.transcript || "";
-  activeMeetingId = meeting.id;
-  chatHistory.innerHTML = "";
-  const date = new Date(meeting.timestamp);
-  topTitle.textContent = date.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " meeting";
-  highlightActiveMeeting();
-}
-
-askBtn.addEventListener("click", async () => {
-  const question = questionInput.value.trim();
-  if (!question || !currentTranscript) return;
-
-  askBtn.disabled = true;
-  askBtn.textContent = "Thinking...";
-
-  try {
-    const response = await fetch(`${API}/ask`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcript: currentTranscript, question }),
-    });
-    const data = await response.json();
-    const qaPair = document.createElement("div");
-    qaPair.className = "qa-pair";
-    qaPair.innerHTML = `<div class="qa-question">${question}</div><div class="qa-answer">${data.answer || "Not discussed."}</div>`;
-    chatHistory.appendChild(qaPair);
-    questionInput.value = "";
-  } catch (err) {
-    console.error(err);
-  }
-
-  askBtn.disabled = false;
-  askBtn.textContent = "Ask";
+document.getElementById('hamburger').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.toggle('open');
 });
 
-questionInput.addEventListener("keypress", (e) => { if (e.key === "Enter") askBtn.click(); });
-
-// ---------- History ----------
-async function loadMeetingList() {
-  try {
-    const response = await fetch(`${API}/meetings`);
-    allMeetings = await response.json();
-    renderMeetingList(allMeetings);
-  } catch (err) {
-    console.error("Could not load meeting history:", err);
+// ---------- load meetings ----------
+async function loadMeetings(){
+  try{
+    const res = await fetch(`${API}/meetings`);
+    allMeetings = await res.json();
+    renderSidebarMeetings();
+    renderMeetingsList();
+    renderHomeRecent();
+  }catch(e){
+    console.error(e);
+    document.getElementById('sbMeetings').innerHTML = '<div class="sb-empty">Backend not reachable</div>';
   }
 }
 
-function renderMeetingList(meetings) {
-  if (meetings.length === 0) {
-    meetingList.innerHTML = '<span class="empty-sidebar">Nothing recorded yet.</span>';
+function renderSidebarMeetings(){
+  const el = document.getElementById('sbMeetings');
+  if(!allMeetings.length){ el.innerHTML = '<div class="sb-empty">No meetings yet</div>'; return; }
+  el.innerHTML = allMeetings.slice(0,8).map(m => `
+    <div class="sb-meeting" data-id="${m.id}">
+      <div class="sb-mtitle">${(m.preview || 'Untitled meeting').slice(0,40)}</div>
+      <div class="sb-mdate">${relDate(m.timestamp)}</div>
+    </div>`).join('');
+  el.querySelectorAll('.sb-meeting').forEach(node=>{
+    node.addEventListener('click', ()=> openMeeting(node.dataset.id));
+  });
+}
+
+function renderHomeRecent(){
+  const el = document.getElementById('homeRecent');
+  if(!allMeetings.length){
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon"></div>
+      <h3>Your memory is empty.</h3>
+      <p>Start your first meeting or upload a recording to get started.</p>
+    </div>`;
     return;
   }
-  meetingList.innerHTML = "";
-  meetings.forEach((m) => {
-    const item = document.createElement("div");
-    item.className = "meeting-item";
-    item.dataset.id = m.id;
-    const date = new Date(m.timestamp).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-    item.innerHTML = `<div class="meeting-item-date">${date}</div><div class="meeting-item-preview">${m.preview}</div>`;
-    item.addEventListener("click", () => loadMeeting(m.id));
-    meetingList.appendChild(item);
-  });
-  highlightActiveMeeting();
+  el.innerHTML = allMeetings.slice(0,4).map(m => meetingCardHTML(m)).join('');
+  bindMeetingCards(el);
 }
 
-searchInput.addEventListener("input", () => {
-  const q = searchInput.value.toLowerCase();
-  const filtered = allMeetings.filter(m => m.preview.toLowerCase().includes(q));
-  renderMeetingList(filtered);
-});
+function renderMeetingsList(){
+  const el = document.getElementById('meetingsList');
+  if(!allMeetings.length){
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon"></div>
+      <h3>Your memory is empty.</h3>
+      <p>Start your first meeting or upload a recording to get started.</p>
+      <div class="empty-btns"><button class="btn btn-primary" onclick="showView('home')">Start Recording</button></div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = allMeetings.map(m => meetingCardHTML(m)).join('');
+  bindMeetingCards(el);
+}
 
-async function loadMeeting(id) {
-  try {
-    const response = await fetch(`${API}/meetings/${id}`);
-    const meeting = await response.json();
-    showMeeting(meeting);
-    status.textContent = "Loaded from history.";
-  } catch (err) {
-    console.error(err);
+function meetingCardHTML(m){
+  return `<div class="m-card" data-id="${m.id}">
+    <div class="m-top">
+      <div class="m-title">${(m.preview || 'Untitled meeting').split('.')[0].slice(0,60)}</div>
+      <div class="m-date">${fmtDate(m.timestamp)}</div>
+    </div>
+    <div class="m-preview">${m.preview || ''}</div>
+  </div>`;
+}
+function bindMeetingCards(container){
+  container.querySelectorAll('.m-card').forEach(node=>{
+    node.addEventListener('click', ()=> openMeeting(node.dataset.id));
+  });
+}
+
+// ---------- meeting detail ----------
+async function openMeeting(id){
+  try{
+    const res = await fetch(`${API}/meetings/${id}`);
+    if(!res.ok) throw new Error('not found');
+    currentMeeting = await res.json();
+    renderDetail();
+    showView('detail');
+  }catch(e){
+    toast('Could not load meeting');
   }
 }
 
-function highlightActiveMeeting() {
-  document.querySelectorAll(".meeting-item").forEach((el) => {
-    el.classList.toggle("active", el.dataset.id === activeMeetingId);
+function renderDetail(){
+  const sections = parseNotes(currentMeeting.structured_notes);
+  const summary = (sections.SUMMARY || '').trim();
+
+  // Build a real title from the summary's first clause instead of a generic label
+  let title = 'Untitled meeting';
+  if (summary && summary !== 'None noted') {
+    const firstClause = summary.split(/[.!?]/)[0].trim();
+    title = firstClause.length > 4 ? firstClause : summary.slice(0, 60);
+    if (title.length > 60) title = title.slice(0, 57) + '…';
+  }
+  document.getElementById('detailTitle').textContent = title;
+  document.getElementById('detailMeta').textContent = fmtDate(currentMeeting.timestamp);
+  document.getElementById('detailTranscript').textContent = currentMeeting.transcript || '(no transcript)';
+
+  const notesEl = document.getElementById('detailNotes');
+  const entries = Object.entries(sections).filter(([label]) => label !== 'SUMMARY');
+  const allEmpty = entries.every(([_, body]) => !body.trim() || body.trim() === 'None noted');
+
+  let html = `<div class="note-sec">
+      <div class="note-sec-label">Summary</div>
+      <div class="note-sec-body ${summary.trim() ? '' : 'empty'}">${summary.trim() || 'No summary generated.'}</div>
+    </div>`;
+
+  if (allEmpty) {
+    html += `<div class="notes-empty-all">No decisions, action items, or follow-ups were identified in this meeting.</div>`;
+  } else {
+    html += entries.map(([label, body]) => {
+      const clean = body.trim();
+      const isEmpty = !clean || clean === 'None noted';
+      return `<div class="note-sec">
+        <div class="note-sec-label">${label}</div>
+        <div class="note-sec-body ${isEmpty ? 'empty' : ''}">${isEmpty ? 'None noted' : clean}</div>
+      </div>`;
+    }).join('');
+  }
+  notesEl.innerHTML = html;
+
+  document.getElementById('chatLog').innerHTML = '';
+  document.getElementById('followupPanel').style.display = 'none';
+}
+
+// ---------- ask ----------
+document.getElementById('askBtn').addEventListener('click', askQuestion);
+document.getElementById('askInput').addEventListener('keypress', e=>{ if(e.key==='Enter') askQuestion(); });
+
+async function askQuestion(){
+  const input = document.getElementById('askInput');
+  const question = input.value.trim();
+  if(!question || !currentMeeting) return;
+  const log = document.getElementById('chatLog');
+  log.innerHTML += `<div class="msg user"><div class="bubble">${question}</div></div>`;
+  input.value = '';
+  log.scrollTop = log.scrollHeight;
+
+  try{
+    const res = await fetch(`${API}/ask`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({transcript: currentMeeting.transcript, question})
+    });
+    const data = await res.json();
+    log.innerHTML += `<div class="msg ai"><div class="bubble">${data.answer || '(no answer)'}</div><div class="grounded">Based on this meeting</div></div>`;
+    log.scrollTop = log.scrollHeight;
+  }catch(e){
+    toast('Ask failed — check backend connection');
+  }
+}
+
+// ---------- follow-ups ----------
+document.getElementById('followupBtn').addEventListener('click', async ()=>{
+  if(!currentMeeting) return;
+  const panel = document.getElementById('followupPanel');
+  const results = document.getElementById('followupResults');
+  panel.style.display = 'block';
+  results.innerHTML = '<div class="skel" style="height:60px;"></div>';
+
+  try{
+    const res = await fetch(`${API}/meeting-followup/${currentMeeting.id}`, {method:'POST'});
+    const data = await res.json();
+    if(!data.items_reviewed || !data.items_reviewed.length){
+      results.innerHTML = `<div class="fu-note">${data.followup || 'No action items to follow up on.'}</div>`;
+      return;
+    }
+    results.innerHTML = data.items_reviewed.map(item => `
+      <div class="fu-card">
+        <div class="fu-top">
+          <div class="fu-item">${item.item}</div>
+          <span class="badge ${item.status === 'recurring' ? 'recurring' : 'new'}">${item.status}</span>
+        </div>
+        <div class="fu-note">${item.note}</div>
+      </div>`).join('') + `<div class="fu-msg">${data.followup}</div>`;
+  }catch(e){
+    results.innerHTML = '<div class="fu-note">Could not generate follow-up — check backend connection.</div>';
+  }
+});
+
+// ---------- generate actions (from meeting detail) ----------
+document.getElementById('actionsGenBtn').addEventListener('click', async ()=>{
+  if(!currentMeeting) return;
+  toast('Generating actions…');
+  try{
+    const res = await fetch(`${API}/generate-actions/${currentMeeting.id}`, {method:'POST'});
+    const data = await res.json();
+    renderActions(data.drafted_actions || []);
+    showView('actions');
+    toast('Actions ready');
+  }catch(e){
+    toast('Could not generate actions — check backend connection');
+  }
+});
+
+let lastActions = [];
+function renderActions(actions){
+  lastActions = actions;
+  applyActionFilter('all');
+}
+function applyActionFilter(type){
+  const el = document.getElementById('actionsResults');
+  const filtered = type === 'all' ? lastActions : lastActions.filter(a => a.type === type);
+  if(!filtered.length){
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon"></div>
+      <h3>No actions here yet</h3>
+      <p>Open a meeting and click "Generate Actions" to see suggested emails, events, and tasks.</p>
+    </div>`;
+    return;
+  }
+  const icons = {email:'✉', calendar_event:'◷', task:'✓', none:'—'};
+  el.innerHTML = filtered.map((a,i) => `
+    <div class="action-card">
+      <div class="action-type-row">
+        <div class="action-icon">${icons[a.type] || '—'}</div>
+        <div class="action-type-label">${(a.type||'action').replace('_',' ')}</div>
+      </div>
+      <div class="action-orig">From: "${a.original_item}"</div>
+      <div class="action-body"><b>${a.title}</b>${a.content ? '\n\n' + a.content : ''}</div>
+      <div class="action-btns">
+        <button class="btn btn-primary btn-sm" onclick="approveAction(${i})">Approve</button>
+        <button class="btn btn-ghost btn-sm">Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.action-card').remove()">Dismiss</button>
+      </div>
+    </div>`).join('');
+}
+document.querySelectorAll('.atab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.atab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    applyActionFilter(tab.dataset.type);
+  });
+});
+function approveAction(i){
+  const a = lastActions[i];
+  if(a.type === 'email'){
+    window.location.href = `mailto:?subject=${encodeURIComponent(a.title)}&body=${encodeURIComponent(a.content)}`;
+  } else if(a.type === 'calendar_event'){
+    const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${a.title}\nDESCRIPTION:${a.content}\nEND:VEVENT\nEND:VCALENDAR`;
+    const blob = new Blob([ics], {type:'text/calendar'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'event.ics';
+    link.click();
+  } else {
+    toast('Task approved — added to your list');
+  }
+}
+
+// ---------- global search (RAG across meetings) ----------
+let searchDebounce;
+document.getElementById('searchInput').addEventListener('keypress', e=>{
+  if(e.key === 'Enter') runSearch(e.target.value.trim());
+});
+async function runSearch(question){
+  if(!question) return;
+  const el = document.getElementById('searchResults');
+  el.innerHTML = '<div class="search-status">Searching your meetings…</div>';
+  try{
+    const res = await fetch(`${API}/search-meetings`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({question})
+    });
+    const data = await res.json();
+    if(!data.sources || !data.sources.length){
+      el.innerHTML = `<div class="empty"><div class="empty-icon"></div><h3>Nothing found yet.</h3><p>${data.answer || 'Try asking your meetings a different question.'}</p></div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div class="search-status">HearlyAI found ${data.sources.length} relevant meeting${data.sources.length>1?'s':''}</div>
+      <div class="answer-card">
+        <div class="answer-label">Answer</div>
+        <div class="answer-text">${data.answer}</div>
+        <div class="sources-row">${data.sources.map(s=>`<span class="source-chip">${fmtDate(s.timestamp)}</span>`).join('')}</div>
+      </div>`;
+  }catch(e){
+    el.innerHTML = '<div class="search-status">Search failed — check backend connection.</div>';
+  }
+}
+
+// ---------- recording ----------
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const uploadBtn = document.getElementById('uploadBtn');
+const fileInput = document.getElementById('fileInput');
+const waveRow = document.getElementById('waveRow');
+const statusPill = document.getElementById('statusPill');
+
+// build waveform bars
+for(let i=0;i<28;i++){
+  const bar = document.createElement('span');
+  bar.style.height = '6px';
+  waveRow.appendChild(bar);
+}
+function animateWave(active){
+  waveRow.querySelectorAll('span').forEach(bar=>{
+    if(active){
+      const tick = () => { if(!recordTimerInterval) return; bar.style.height = (6 + Math.random()*38) + 'px'; };
+      bar._interval = setInterval(tick, 220 + Math.random()*200);
+    } else {
+      clearInterval(bar._interval);
+      bar.style.height = '6px';
+    }
   });
 }
 
-loadMeetingList();
+startBtn.addEventListener('click', async ()=>{
+  try{
+    const res = await fetch(`${API}/start-meeting`, {method:'POST'});
+    if(res.status === 501){
+      toast('Live recording needs to run natively on Windows (not available here)');
+      return;
+    }
+    if(!res.ok) throw new Error();
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-block';
+    statusPill.style.display = 'flex';
+    recordSeconds = 0;
+    recordTimerInterval = setInterval(()=>{
+      recordSeconds++;
+      const m = String(Math.floor(recordSeconds/60)).padStart(2,'0');
+      const s = String(recordSeconds%60).padStart(2,'0');
+      document.getElementById('recTimer').textContent = `${m}:${s}`;
+    }, 1000);
+    animateWave(true);
+  }catch(e){
+    toast('Could not start recording — check backend connection');
+  }
+});
+
+stopBtn.addEventListener('click', async ()=>{
+  try{
+    stopBtn.disabled = true;
+    document.getElementById('recHint').textContent = 'Processing recording…';
+    const res = await fetch(`${API}/stop-meeting`, {method:'POST'});
+    const data = await res.json();
+    clearInterval(recordTimerInterval);
+    recordTimerInterval = null;
+    animateWave(false);
+    startBtn.style.display = 'inline-block';
+    stopBtn.style.display = 'none';
+    stopBtn.disabled = false;
+    statusPill.style.display = 'none';
+    document.getElementById('recHint').textContent = '';
+    toast('Meeting saved to your memory');
+    loadMeetings();
+  }catch(e){
+    toast('Could not stop recording');
+    stopBtn.disabled = false;
+  }
+});
+
+uploadBtn.addEventListener('click', ()=> fileInput.click());
+fileInput.addEventListener('change', async ()=>{
+  const file = fileInput.files[0];
+  if(!file) return;
+  document.getElementById('recHint').textContent = 'Transcribing → Understanding → Creating notes…';
+  const formData = new FormData();
+  formData.append('file', file);
+  try{
+    const res = await fetch(`${API}/process-meeting`, {method:'POST', body: formData});
+    const data = await res.json();
+    document.getElementById('recHint').textContent = '';
+    toast('Recording processed and saved');
+    await loadMeetings();
+    openMeeting(data.id);
+  }catch(e){
+    document.getElementById('recHint').textContent = '';
+    toast('Upload failed — check backend connection');
+  }
+  fileInput.value = '';
+});
+
+// ---------- init ----------
+loadMeetings();
 </script>
 
 </body>
