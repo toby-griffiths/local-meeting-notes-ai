@@ -377,7 +377,37 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = "http://localhost:8000";
+// The UI is served by the backend, so API calls are same-origin.
+const API = "";
+const TOKEN_KEY = 'meetingNotesApiToken';
+let apiToken = (function(){
+  // Accept the token from the URL fragment printed by the backend (#token=...).
+  // Fragments are never sent to the server or in Referer headers.
+  const m = location.hash.match(/(?:^#|&)token=([^&]+)/);
+  if(m){
+    const t = decodeURIComponent(m[1]);
+    try{ localStorage.setItem(TOKEN_KEY, t); }catch(e){}
+    history.replaceState(null, '', location.pathname + location.search);
+    return t;
+  }
+  try{ return localStorage.getItem(TOKEN_KEY) || ''; }catch(e){ return ''; }
+})();
+async function apiFetch(path, opts = {}){
+  if(!apiToken){
+    apiToken = (window.prompt('Enter the API token printed in the backend logs:') || '').trim();
+    try{ localStorage.setItem(TOKEN_KEY, apiToken); }catch(e){}
+  }
+  const headers = new Headers(opts.headers || {});
+  headers.set('Authorization', 'Bearer ' + apiToken);
+  const res = await fetch(API + path, {...opts, headers});
+  if(res.status === 401){
+    apiToken = '';
+    try{ localStorage.removeItem(TOKEN_KEY); }catch(e){}
+    toast('API token rejected. Reload and enter the token from the backend logs.');
+    throw new Error('Unauthorized');
+  }
+  return res;
+}
 let allMeetings = [];
 let currentMeeting = null;
 let recordTimerInterval = null;
@@ -443,7 +473,7 @@ document.getElementById('hamburger').addEventListener('click', ()=>{
 // ---------- load meetings ----------
 async function loadMeetings(){
   try{
-    const res = await fetch(`${API}/meetings`);
+    const res = await apiFetch(`/meetings`);
     allMeetings = await res.json();
     renderSidebarMeetings();
     renderMeetingsList();
@@ -514,7 +544,7 @@ function bindMeetingCards(container){
 // ---------- meeting detail ----------
 async function openMeeting(id){
   try{
-    const res = await fetch(`${API}/meetings/${id}`);
+    const res = await apiFetch(`/meetings/${id}`);
     if(!res.ok) throw new Error('not found');
     currentMeeting = await res.json();
     renderDetail();
@@ -580,7 +610,7 @@ async function askQuestion(){
   log.scrollTop = log.scrollHeight;
 
   try{
-    const res = await fetch(`${API}/ask`, {
+    const res = await apiFetch(`/ask`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({transcript: currentMeeting.transcript, question})
     });
@@ -601,7 +631,7 @@ document.getElementById('followupBtn').addEventListener('click', async ()=>{
   results.innerHTML = '<div class="skel" style="height:60px;"></div>';
 
   try{
-    const res = await fetch(`${API}/meeting-followup/${currentMeeting.id}`, {method:'POST'});
+    const res = await apiFetch(`/meeting-followup/${currentMeeting.id}`, {method:'POST'});
     const data = await res.json();
     if(!data.items_reviewed || !data.items_reviewed.length){
       results.innerHTML = `<div class="fu-note">${data.followup || 'No action items to follow up on.'}</div>`;
@@ -625,7 +655,7 @@ document.getElementById('actionsGenBtn').addEventListener('click', async ()=>{
   if(!currentMeeting) return;
   toast('Generating actions…');
   try{
-    const res = await fetch(`${API}/generate-actions/${currentMeeting.id}`, {method:'POST'});
+    const res = await apiFetch(`/generate-actions/${currentMeeting.id}`, {method:'POST'});
     const data = await res.json();
     renderActions(data.drafted_actions || []);
     showView('actions');
@@ -700,7 +730,7 @@ async function runSearch(question){
   const el = document.getElementById('searchResults');
   el.innerHTML = '<div class="search-status">Searching your meetings…</div>';
   try{
-    const res = await fetch(`${API}/search-meetings`, {
+    const res = await apiFetch(`/search-meetings`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({question})
     });
@@ -749,7 +779,7 @@ function animateWave(active){
 
 startBtn.addEventListener('click', async ()=>{
   try{
-    const res = await fetch(`${API}/start-meeting`, {method:'POST'});
+    const res = await apiFetch(`/start-meeting`, {method:'POST'});
     if(res.status === 501){
       toast('Live recording needs to run natively on Windows (not available here)');
       return;
@@ -775,7 +805,7 @@ stopBtn.addEventListener('click', async ()=>{
   try{
     stopBtn.disabled = true;
     document.getElementById('recHint').textContent = 'Processing recording…';
-    const res = await fetch(`${API}/stop-meeting`, {method:'POST'});
+    const res = await apiFetch(`/stop-meeting`, {method:'POST'});
     const data = await res.json();
     clearInterval(recordTimerInterval);
     recordTimerInterval = null;
@@ -801,7 +831,7 @@ fileInput.addEventListener('change', async ()=>{
   const formData = new FormData();
   formData.append('file', file);
   try{
-    const res = await fetch(`${API}/process-meeting`, {method:'POST', body: formData});
+    const res = await apiFetch(`/process-meeting`, {method:'POST', body: formData});
     const data = await res.json();
     document.getElementById('recHint').textContent = '';
     toast('Recording processed and saved');
