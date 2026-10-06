@@ -4,12 +4,22 @@ A privacy-first, fully local alternative to tools like Granola or Otter.ai. It l
 
 ## What it does
 
-- **Live meeting capture** — hit "Start Meeting" when your call begins (Zoom, Meet, Teams, anything), and it records both your microphone and your computer's system audio (the other participants) together, using Windows WASAPI loopback capture. No bot joins your call, no visible recording indicator to other participants — it works quietly in the background, the same way Granola itself works.
+- **Live meeting capture** — hit "Start Meeting" when your call begins (Zoom, Meet, Teams, anything), and it records both your microphone and your computer's system audio (the other participants) together, using Windows WASAPI loopback capture. No bot joins your call, so other participants get no automatic recording notice. **You need to tell them yourself** (see [Recording consent](#recording-consent)).
 - **Local transcription** — powered by [faster-whisper](https://github.com/SYSTRAN/faster-whisper) running entirely on your CPU. No audio ever leaves your machine.
 - **Local AI note structuring** — a locally-run LLM via [Ollama](https://ollama.com) turns the raw transcript into a Summary, Key Decisions, Action Items, and Follow-up Tasks.
 - **Meeting history** — every meeting is saved locally and browsable from a sidebar.
 - **Ask your meeting anything** — a simple Q&A feature lets you ask questions about a specific meeting's transcript and get answers grounded only in what was actually said.
 - **Fallback file upload** — if you'd rather transcribe a pre-recorded audio file instead of live-capturing, that works too.
+
+## Recording consent
+
+This tool records other people's voices without any indicator on their side. Before using it:
+
+- **Tell participants you're recording and transcribing**, ideally at the start of the call and in the invite.
+- **Know the law where you and they are.** Some jurisdictions require every participant's consent (e.g. several US states, including California). In the UK and EU, recording for business purposes means processing personal data under UK GDPR / GDPR: you need a lawful basis, must be transparent, and must handle access and deletion requests.
+- **Treat transcripts as personal data.** Keep them on an encrypted disk, and delete meetings you no longer need.
+
+This is not legal advice. Check with your organisation or a lawyer if unsure.
 
 ## Tech stack
 
