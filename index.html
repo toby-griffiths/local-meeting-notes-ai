@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HearlyAI</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#f7f3ec;
@@ -25,8 +23,9 @@
     --danger-dim:#f3e2dc;
     --radius:16px;
     --radius-sm:10px;
-    --serif:'Fraunces',serif;
-    --sans:'Inter',sans-serif;
+    /* No external font CDN: use Fraunces/Inter if installed locally, else system fonts. */
+    --serif:'Fraunces',Georgia,'Times New Roman',serif;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
     --shadow:0 1px 2px rgba(43,38,32,.04), 0 8px 24px -8px rgba(43,38,32,.08);
     --shadow-lift:0 4px 8px rgba(43,38,32,.05), 0 16px 40px -12px rgba(43,38,32,.14);
   }

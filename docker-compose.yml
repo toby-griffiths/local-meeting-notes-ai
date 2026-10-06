@@ -2,7 +2,8 @@ version: "3.9"
 
 services:
   ollama:
-    image: ollama/ollama:latest
+    # Pinned: bump deliberately after checking the release notes.
+    image: ollama/ollama:0.35.1
     container_name: ollama
     # No published ports: the app reaches Ollama over the internal compose
     # network (http://ollama:11434). Publishing 11434 would expose an
