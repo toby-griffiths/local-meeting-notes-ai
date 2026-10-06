@@ -90,7 +90,7 @@ This is not legal advice. Check with your organisation or a lawyer if unsure.
 
 - **Windows only** — the system audio loopback capture relies on WASAPI, which is Windows-specific. It won't run as-is on macOS or Linux.
 - **Transcription accuracy** — using the `small` Whisper model with beam search and VAD filtering for a balance of speed and accuracy on CPU. Accuracy on noisy or heavily overlapping conversation is still a work in progress.
-- **No delete option yet** — meeting history is stored in `meetings.json` inside `app/`; removing old meetings currently means editing that file directly.
+- **Data is not encrypted by the app** — meeting history is stored in `meetings.json` under `DATA_DIR` (default `app/data/`, or the `meeting_data` volume in Docker), with owner-only permissions. Keep it on an encrypted disk (FileVault / BitLocker). Delete meetings from the meeting page.
 - **Long meetings aren't optimized** — very long transcripts may hit the local LLM's context window or processing time limits. Works well for typical meeting lengths (15-30+ min); not yet built for multi-hour sessions.
 - **Single-user, local-only** — this isn't designed for multi-device sync or shared team access; it's a personal, on-device tool.
 
@@ -98,4 +98,3 @@ This is not legal advice. Check with your organisation or a lawyer if unsure.
 
 - Live streaming transcript (see it update in real time during the meeting, not just after)
 - Semantic search across all past meetings (ask "what did we decide about X" across your whole history, not just one meeting)
-- Delete/manage meeting history from the UI

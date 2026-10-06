@@ -15,6 +15,7 @@ import tempfile
 import os
 import json
 import uuid
+import threading
 from datetime import datetime
 
 # Safe import — MeetingRecorder needs PyAudioWPatch, which is Windows-only.
@@ -53,7 +54,32 @@ ALLOWED_HOSTS = [
 UI_FILE = Path(os.getenv("UI_FILE", Path(__file__).resolve().parent.parent / "index.html"))
 PUBLIC_GET_PATHS = {"/"}  # only the UI page itself is served without a token
 
-HISTORY_FILE = "meetings.json"
+# --- Storage --------------------------------------------------------------
+# Transcripts, notes and temporary audio all live under DATA_DIR (default
+# app/data/), created owner-only (0700). Keep it on an encrypted disk
+# (FileVault / BitLocker); the data itself is not encrypted by the app.
+DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).resolve().parent / "data"))
+HISTORY_FILE = DATA_DIR / "meetings.json"
+TMP_DIR = DATA_DIR / "tmp"
+_history_lock = threading.Lock()
+
+
+def _init_storage():
+    for d in (DATA_DIR, TMP_DIR):
+        d.mkdir(mode=0o700, parents=True, exist_ok=True)
+        os.chmod(d, 0o700)
+    if HISTORY_FILE.exists():
+        os.chmod(HISTORY_FILE, 0o600)
+    # Recordings/uploads are written here instead of the system temp dir, so
+    # they stay in the protected data dir. Anything left over from a crash is
+    # raw meeting audio, so remove it on startup.
+    for leftover in TMP_DIR.iterdir():
+        if leftover.is_file():
+            leftover.unlink()
+    tempfile.tempdir = str(TMP_DIR)
+
+
+_init_storage()
 
 TRANSCRIBE_OPTIONS = dict(
     language="en",
@@ -64,15 +90,28 @@ TRANSCRIBE_OPTIONS = dict(
 
 
 def load_history():
-    if not os.path.exists(HISTORY_FILE):
-        return []
-    with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    with _history_lock:
+        if not HISTORY_FILE.exists():
+            return []
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
 
 
 def save_history(meetings):
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(meetings, f, indent=2)
+    """Atomic, owner-only write: a crash mid-write can't corrupt the history."""
+    with _history_lock:
+        tmp_path = HISTORY_FILE.with_name(HISTORY_FILE.name + ".tmp")
+        fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(meetings, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, HISTORY_FILE)
+        except BaseException:
+            if tmp_path.exists():
+                tmp_path.unlink()
+            raise
 
 
 def get_embedding(text: str) -> list:
@@ -350,6 +389,16 @@ def get_meeting(meeting_id: str):
         if m["id"] == meeting_id:
             return m
     raise HTTPException(status_code=404, detail="Meeting not found")
+
+
+@app.delete("/meetings/{meeting_id}")
+def delete_meeting(meeting_id: str):
+    meetings = load_history()
+    remaining = [m for m in meetings if m["id"] != meeting_id]
+    if len(remaining) == len(meetings):
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    save_history(remaining)
+    return {"status": "deleted", "id": meeting_id}
 
 
 @app.post("/search-meetings")
