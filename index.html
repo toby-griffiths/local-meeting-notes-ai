@@ -311,6 +311,7 @@
         <div class="detail-btns">
           <button class="btn btn-ghost btn-sm" id="followupBtn">Check Follow-ups</button>
           <button class="btn btn-ghost btn-sm" id="actionsGenBtn">Generate Actions</button>
+          <button class="btn btn-danger btn-sm" id="deleteMeetingBtn">Delete</button>
         </div>
       </div>
 
@@ -655,6 +656,22 @@ document.getElementById('followupBtn').addEventListener('click', async ()=>{
       </div>`).join('') + `<div class="fu-msg">${esc(data.followup)}</div>`;
   }catch(e){
     results.innerHTML = '<div class="fu-note">Could not generate follow-up — check backend connection.</div>';
+  }
+});
+
+// ---------- delete meeting ----------
+document.getElementById('deleteMeetingBtn').addEventListener('click', async ()=>{
+  if(!currentMeeting) return;
+  if(!confirm('Delete this meeting, its transcript and notes? This cannot be undone.')) return;
+  try{
+    const res = await apiFetch(`/meetings/${encodeURIComponent(currentMeeting.id)}`, {method:'DELETE'});
+    if(!res.ok) throw new Error();
+    currentMeeting = null;
+    toast('Meeting deleted');
+    await loadMeetings();
+    showView('meetings');
+  }catch(e){
+    toast('Could not delete meeting');
   }
 });
 

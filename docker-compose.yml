@@ -26,9 +26,14 @@ services:
       # Set API_TOKEN in a .env file next to this compose file. If empty, a
       # temporary token is generated on each start (see `docker compose logs app`).
       - API_TOKEN=${API_TOKEN:-}
+      - DATA_DIR=/data
+    volumes:
+      # Meeting history and temporary audio. Persists across rebuilds.
+      - meeting_data:/data
     depends_on:
       - ollama
     restart: unless-stopped
 
 volumes:
   ollama_data:
+  meeting_data:
