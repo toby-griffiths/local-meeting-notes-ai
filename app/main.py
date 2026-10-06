@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from faster_whisper import WhisperModel
 import tempfile
+import shutil
 import os
 import json
 import uuid
@@ -33,6 +34,8 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_EMBED_URL = OLLAMA_URL.replace("/api/generate", "/api/embeddings")
 WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "base")
+# Largest request body accepted (uploads included), in MB.
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_MB", "500")) * 1024 * 1024
 EMBEDDING_MODEL = "nomic-embed-text"
 
 # --- Access control -------------------------------------------------------
@@ -160,6 +163,72 @@ class APITokenMiddleware:
         await send({"type": "http.response.body", "body": body})
 
 
+class RequestTooLarge(HTTPException):
+    def __init__(self):
+        super().__init__(status_code=413, detail="Request body too large")
+
+
+class BodySizeLimitMiddleware:
+    """Plain ASGI middleware: rejects bodies over max_bytes, using
+    Content-Length up front and counting bytes as they stream in (covers
+    chunked uploads with no Content-Length)."""
+
+    def __init__(self, app, max_bytes: int):
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def _reject(self, send):
+        body = b'{"detail":"Request body too large"}'
+        await send({
+            "type": "http.response.start",
+            "status": 413,
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(body)).encode()),
+            ],
+        })
+        await send({"type": "http.response.body", "body": body})
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        for name, value in scope.get("headers", []):
+            if name.lower() == b"content-length":
+                try:
+                    too_big = int(value) > self.max_bytes
+                except ValueError:
+                    too_big = True
+                if too_big:
+                    return await self._reject(send)
+
+        received = 0
+        response_started = False
+
+        async def limited_receive():
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_bytes:
+                    raise RequestTooLarge()
+            return message
+
+        async def tracking_send(message):
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
+
+        try:
+            await self.app(scope, limited_receive, tracking_send)
+        except RequestTooLarge:
+            if response_started:
+                raise
+            await self._reject(send)
+
+
+# Inner to the token check, so unauthenticated requests are rejected first.
+app.add_middleware(BodySizeLimitMiddleware, max_bytes=MAX_UPLOAD_BYTES)
 app.add_middleware(APITokenMiddleware, token=API_TOKEN, public_get_paths=PUBLIC_GET_PATHS)
 # Added last so it runs first: reject unexpected Host headers before anything else.
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
@@ -202,9 +271,9 @@ def health_check():
 
 @app.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
+    # Stream to disk in 1 MB chunks instead of loading the whole file into memory.
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        contents = await file.read()
-        tmp.write(contents)
+        shutil.copyfileobj(file.file, tmp, 1024 * 1024)
         tmp_path = tmp.name
 
     try:

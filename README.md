@@ -59,6 +59,8 @@ A privacy-first, fully local alternative to tools like Granola or Otter.ai. It l
 
    Optional: `ALLOWED_HOSTS` (comma-separated, default `localhost,127.0.0.1`) limits which `Host` headers are accepted.
 
+   Optional: `MAX_UPLOAD_MB` (default `500`) caps the size of any request, including audio uploads.
+
 6. **Run the backend**
 ```bash
    cd app
