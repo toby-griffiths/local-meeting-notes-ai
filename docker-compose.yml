@@ -4,8 +4,10 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
-    ports:
-      - "11434:11434"
+    # No published ports: the app reaches Ollama over the internal compose
+    # network (http://ollama:11434). Publishing 11434 would expose an
+    # unauthenticated Ollama API to your LAN. To use the Ollama CLI, run
+    # `docker compose exec ollama ollama ...` instead.
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped
@@ -14,7 +16,9 @@ services:
     build: .
     container_name: meeting-notes-app
     ports:
-      - "8000:8000"
+      # Bind to loopback only. "8000:8000" would listen on every interface
+      # and expose all meeting data to anyone on your network.
+      - "127.0.0.1:8000:8000"
     environment:
       - OLLAMA_MODEL=llama3.2:3b
       - OLLAMA_URL=http://ollama:11434/api/generate
