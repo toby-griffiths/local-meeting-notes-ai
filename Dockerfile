@@ -10,6 +10,7 @@ COPY requirements-docker.txt .
 RUN pip install --no-cache-dir -r requirements-docker.txt
 
 COPY app/ ./app/
+COPY index.html ./index.html
 
 WORKDIR /app/app
 

@@ -19,6 +19,9 @@ services:
       - OLLAMA_MODEL=llama3.2:3b
       - OLLAMA_URL=http://ollama:11434/api/generate
       - WHISPER_MODEL_SIZE=base
+      # Set API_TOKEN in a .env file next to this compose file. If empty, a
+      # temporary token is generated on each start (see `docker compose logs app`).
+      - API_TOKEN=${API_TOKEN:-}
     depends_on:
       - ollama
     restart: unless-stopped

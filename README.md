@@ -51,17 +51,22 @@ A privacy-first, fully local alternative to tools like Granola or Otter.ai. It l
 ```
 
 5. **Set up environment variables**
-   Create a `.env` file inside `app/`:
+   Create a `.env` file inside `app/` with a long random API token, for example:
+```bash
+   python -c "import secrets; print('API_TOKEN=' + secrets.token_urlsafe(32))" > app/.env
+```
+   Every API request must send `Authorization: Bearer <API_TOKEN>`. If `API_TOKEN` is not set, a temporary token is generated on each start and printed in the logs.
+
+   Optional: `ALLOWED_HOSTS` (comma-separated, default `localhost,127.0.0.1`) limits which `Host` headers are accepted.
 
 6. **Run the backend**
 ```bash
    cd app
-   uvicorn main:app --reload
+   uvicorn main:app --host 127.0.0.1
 ```
-   Confirm it's running at `http://localhost:8000/docs`.
 
 7. **Open the frontend**
-   Open `app/index.html` directly in your browser (double-click, or drag it in). Make sure the backend is running first.
+   The backend serves the UI. Open the URL printed at startup (`http://localhost:8000/#token=...`). The token is saved in your browser and removed from the address bar. Don't open `index.html` from disk; it won't be able to reach the API.
 
 ## How to use it
 

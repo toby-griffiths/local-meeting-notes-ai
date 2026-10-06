@@ -4,9 +4,12 @@ Granola-style local AI meeting notes app — backend.
 
 import requests
 import math
+import secrets
+from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from faster_whisper import WhisperModel
 import tempfile
 import os
@@ -31,6 +34,24 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_EMBED_URL = OLLAMA_URL.replace("/api/generate", "/api/embeddings")
 WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "base")
 EMBEDDING_MODEL = "nomic-embed-text"
+
+# --- Access control -------------------------------------------------------
+# Every API call must send `Authorization: Bearer <API_TOKEN>`. If no token is
+# configured, a random one is generated for this run (and printed below) so the
+# API is never left open.
+API_TOKEN = os.getenv("API_TOKEN", "").strip()
+_API_TOKEN_GENERATED = not API_TOKEN
+if _API_TOKEN_GENERATED:
+    API_TOKEN = secrets.token_urlsafe(32)
+
+# Host headers we accept. Blocks DNS-rebinding attacks from malicious websites.
+ALLOWED_HOSTS = [
+    h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()
+]
+
+# The frontend is served by this backend (same origin), so no CORS is needed.
+UI_FILE = Path(os.getenv("UI_FILE", Path(__file__).resolve().parent.parent / "index.html"))
+PUBLIC_GET_PATHS = {"/"}  # only the UI page itself is served without a token
 
 HISTORY_FILE = "meetings.json"
 
@@ -103,12 +124,50 @@ If there are none or it says "None noted", return exactly: NONE
 
 app = FastAPI(title="Local Meeting Notes AI")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+class APITokenMiddleware:
+    """Plain ASGI middleware: rejects any HTTP request without a valid bearer token,
+    except GET on PUBLIC_GET_PATHS (the UI page)."""
+
+    def __init__(self, app, token: str, public_get_paths=frozenset()):
+        self.app = app
+        self.token = token.encode()
+        self.public_get_paths = public_get_paths
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        if scope["method"] == "GET" and scope["path"] in self.public_get_paths:
+            return await self.app(scope, receive, send)
+        auth = b""
+        for name, value in scope.get("headers", []):
+            if name.lower() == b"authorization":
+                auth = value
+                break
+        scheme, _, token = auth.partition(b" ")
+        if scheme.lower() == b"bearer" and secrets.compare_digest(token.strip(), self.token):
+            return await self.app(scope, receive, send)
+        body = b'{"detail":"Missing or invalid API token"}'
+        await send({
+            "type": "http.response.start",
+            "status": 401,
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"content-length", str(len(body)).encode()),
+                (b"www-authenticate", b"Bearer"),
+            ],
+        })
+        await send({"type": "http.response.body", "body": body})
+
+
+app.add_middleware(APITokenMiddleware, token=API_TOKEN, public_get_paths=PUBLIC_GET_PATHS)
+# Added last so it runs first: reject unexpected Host headers before anything else.
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+
+if _API_TOKEN_GENERATED:
+    print("API_TOKEN not set; generated a temporary token for this run.")
+    print("Set API_TOKEN in app/.env (or your environment) to keep it stable across restarts.")
+print(f"Open the UI at: http://localhost:8000/#token={API_TOKEN}")
 
 print(f"Loading Whisper model ({WHISPER_MODEL_SIZE})...")
 whisper_model = WhisperModel(WHISPER_MODEL_SIZE, device="cpu", compute_type="int8")
@@ -117,7 +176,21 @@ print("Whisper model loaded.")
 recording_active = False
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
+def ui():
+    return FileResponse(
+        UI_FILE,
+        media_type="text/html",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Frame-Options": "DENY",
+            "Content-Security-Policy": "frame-ancestors 'none'",
+            "Referrer-Policy": "no-referrer",
+        },
+    )
+
+
+@app.get("/health")
 def health_check():
     return {
         "status": "running",
