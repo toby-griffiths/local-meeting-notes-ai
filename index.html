@@ -414,6 +414,14 @@ function parseNotes(raw){
   });
   return sections;
 }
+// Escape untrusted text (transcripts, LLM output, user input, server data)
+// before it is interpolated into HTML. Everything rendered via innerHTML must
+// go through this.
+function esc(value){
+  return String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  })[c]);
+}
 
 // ---------- greeting ----------
 (function setGreeting(){
@@ -458,9 +466,9 @@ function renderSidebarMeetings(){
   const el = document.getElementById('sbMeetings');
   if(!allMeetings.length){ el.innerHTML = '<div class="sb-empty">No meetings yet</div>'; return; }
   el.innerHTML = allMeetings.slice(0,8).map(m => `
-    <div class="sb-meeting" data-id="${m.id}">
-      <div class="sb-mtitle">${(m.preview || 'Untitled meeting').slice(0,40)}</div>
-      <div class="sb-mdate">${relDate(m.timestamp)}</div>
+    <div class="sb-meeting" data-id="${esc(m.id)}">
+      <div class="sb-mtitle">${esc((m.preview || 'Untitled meeting').slice(0,40))}</div>
+      <div class="sb-mdate">${esc(relDate(m.timestamp))}</div>
     </div>`).join('');
   el.querySelectorAll('.sb-meeting').forEach(node=>{
     node.addEventListener('click', ()=> openMeeting(node.dataset.id));
@@ -497,12 +505,12 @@ function renderMeetingsList(){
 }
 
 function meetingCardHTML(m){
-  return `<div class="m-card" data-id="${m.id}">
+  return `<div class="m-card" data-id="${esc(m.id)}">
     <div class="m-top">
-      <div class="m-title">${(m.preview || 'Untitled meeting').split('.')[0].slice(0,60)}</div>
-      <div class="m-date">${fmtDate(m.timestamp)}</div>
+      <div class="m-title">${esc((m.preview || 'Untitled meeting').split('.')[0].slice(0,60))}</div>
+      <div class="m-date">${esc(fmtDate(m.timestamp))}</div>
     </div>
-    <div class="m-preview">${m.preview || ''}</div>
+    <div class="m-preview">${esc(m.preview || '')}</div>
   </div>`;
 }
 function bindMeetingCards(container){
@@ -545,7 +553,7 @@ function renderDetail(){
 
   let html = `<div class="note-sec">
       <div class="note-sec-label">Summary</div>
-      <div class="note-sec-body ${summary.trim() ? '' : 'empty'}">${summary.trim() || 'No summary generated.'}</div>
+      <div class="note-sec-body ${summary.trim() ? '' : 'empty'}">${esc(summary.trim() || 'No summary generated.')}</div>
     </div>`;
 
   if (allEmpty) {
@@ -555,8 +563,8 @@ function renderDetail(){
       const clean = body.trim();
       const isEmpty = !clean || clean === 'None noted';
       return `<div class="note-sec">
-        <div class="note-sec-label">${label}</div>
-        <div class="note-sec-body ${isEmpty ? 'empty' : ''}">${isEmpty ? 'None noted' : clean}</div>
+        <div class="note-sec-label">${esc(label)}</div>
+        <div class="note-sec-body ${isEmpty ? 'empty' : ''}">${isEmpty ? 'None noted' : esc(clean)}</div>
       </div>`;
     }).join('');
   }
@@ -575,7 +583,7 @@ async function askQuestion(){
   const question = input.value.trim();
   if(!question || !currentMeeting) return;
   const log = document.getElementById('chatLog');
-  log.innerHTML += `<div class="msg user"><div class="bubble">${question}</div></div>`;
+  log.innerHTML += `<div class="msg user"><div class="bubble">${esc(question)}</div></div>`;
   input.value = '';
   log.scrollTop = log.scrollHeight;
 
@@ -585,7 +593,7 @@ async function askQuestion(){
       body: JSON.stringify({transcript: currentMeeting.transcript, question})
     });
     const data = await res.json();
-    log.innerHTML += `<div class="msg ai"><div class="bubble">${data.answer || '(no answer)'}</div><div class="grounded">Based on this meeting</div></div>`;
+    log.innerHTML += `<div class="msg ai"><div class="bubble">${esc(data.answer || '(no answer)')}</div><div class="grounded">Based on this meeting</div></div>`;
     log.scrollTop = log.scrollHeight;
   }catch(e){
     toast('Ask failed — check backend connection');
@@ -604,17 +612,17 @@ document.getElementById('followupBtn').addEventListener('click', async ()=>{
     const res = await fetch(`${API}/meeting-followup/${currentMeeting.id}`, {method:'POST'});
     const data = await res.json();
     if(!data.items_reviewed || !data.items_reviewed.length){
-      results.innerHTML = `<div class="fu-note">${data.followup || 'No action items to follow up on.'}</div>`;
+      results.innerHTML = `<div class="fu-note">${esc(data.followup || 'No action items to follow up on.')}</div>`;
       return;
     }
     results.innerHTML = data.items_reviewed.map(item => `
       <div class="fu-card">
         <div class="fu-top">
-          <div class="fu-item">${item.item}</div>
-          <span class="badge ${item.status === 'recurring' ? 'recurring' : 'new'}">${item.status}</span>
+          <div class="fu-item">${esc(item.item)}</div>
+          <span class="badge ${item.status === 'recurring' ? 'recurring' : 'new'}">${esc(item.status)}</span>
         </div>
-        <div class="fu-note">${item.note}</div>
-      </div>`).join('') + `<div class="fu-msg">${data.followup}</div>`;
+        <div class="fu-note">${esc(item.note)}</div>
+      </div>`).join('') + `<div class="fu-msg">${esc(data.followup)}</div>`;
   }catch(e){
     results.innerHTML = '<div class="fu-note">Could not generate follow-up — check backend connection.</div>';
   }
@@ -656,10 +664,10 @@ function applyActionFilter(type){
     <div class="action-card">
       <div class="action-type-row">
         <div class="action-icon">${icons[a.type] || '—'}</div>
-        <div class="action-type-label">${(a.type||'action').replace('_',' ')}</div>
+        <div class="action-type-label">${esc((a.type||'action').replace('_',' '))}</div>
       </div>
-      <div class="action-orig">From: "${a.original_item}"</div>
-      <div class="action-body"><b>${a.title}</b>${a.content ? '\n\n' + a.content : ''}</div>
+      <div class="action-orig">From: "${esc(a.original_item)}"</div>
+      <div class="action-body"><b>${esc(a.title)}</b>${a.content ? '\n\n' + esc(a.content) : ''}</div>
       <div class="action-btns">
         <button class="btn btn-primary btn-sm" onclick="approveAction(${i})">Approve</button>
         <button class="btn btn-ghost btn-sm">Edit</button>
@@ -706,15 +714,15 @@ async function runSearch(question){
     });
     const data = await res.json();
     if(!data.sources || !data.sources.length){
-      el.innerHTML = `<div class="empty"><div class="empty-icon"></div><h3>Nothing found yet.</h3><p>${data.answer || 'Try asking your meetings a different question.'}</p></div>`;
+      el.innerHTML = `<div class="empty"><div class="empty-icon"></div><h3>Nothing found yet.</h3><p>${esc(data.answer || 'Try asking your meetings a different question.')}</p></div>`;
       return;
     }
     el.innerHTML = `
       <div class="search-status">HearlyAI found ${data.sources.length} relevant meeting${data.sources.length>1?'s':''}</div>
       <div class="answer-card">
         <div class="answer-label">Answer</div>
-        <div class="answer-text">${data.answer}</div>
-        <div class="sources-row">${data.sources.map(s=>`<span class="source-chip">${fmtDate(s.timestamp)}</span>`).join('')}</div>
+        <div class="answer-text">${esc(data.answer)}</div>
+        <div class="sources-row">${data.sources.map(s=>`<span class="source-chip">${esc(fmtDate(s.timestamp))}</span>`).join('')}</div>
       </div>`;
   }catch(e){
     el.innerHTML = '<div class="search-status">Search failed — check backend connection.</div>';
