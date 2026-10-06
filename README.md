@@ -40,24 +40,27 @@ This is not legal advice. Check with your organisation or a lawyer if unsure.
 1. **Clone the repo**
 ```bash
    git clone <your-repo-url>
-   cd granola-clone
+   cd local-meeting-notes-ai
 ```
 
 2. **Create and activate a virtual environment**
 ```bash
    python -m venv venv
-   venv\Scripts\activate
+   venv\Scripts\activate        # Windows
+   source venv/bin/activate     # macOS / Linux
 ```
 
 3. **Install dependencies**
 ```bash
-   pip install fastapi uvicorn python-dotenv requests faster-whisper PyAudioWPatch numpy scipy
+   pip install -r requirements.txt
 ```
+   Run this from the repo root. On non-Windows platforms the Windows-only `PyAudioWPatch` is skipped, so live recording is unavailable but uploading recordings works.
 
-4. **Install Ollama and pull the model**
+4. **Install Ollama and pull the models**
    Download Ollama from [ollama.com](https://ollama.com), then:
 ```bash
-   ollama pull llama3.2:3b
+   ollama pull llama3.2:3b         # note structuring and Q&A
+   ollama pull nomic-embed-text    # embeddings for search and follow-ups
 ```
 
 5. **Set up environment variables**
@@ -79,6 +82,18 @@ This is not legal advice. Check with your organisation or a lawyer if unsure.
 
 7. **Open the frontend**
    The backend serves the UI. Open the URL printed at startup (`http://localhost:8000/#token=...`). The token is saved in your browser and removed from the address bar. Don't open `index.html` from disk; it won't be able to reach the API.
+
+### Alternative: Docker
+
+Uploading recordings works in Docker; live recording doesn't (it needs native Windows audio).
+
+```bash
+python -c "import secrets; print('API_TOKEN=' + secrets.token_urlsafe(32))" > .env
+docker compose up -d --build
+docker compose exec ollama ollama pull llama3.2:3b
+docker compose exec ollama ollama pull nomic-embed-text
+docker compose logs app | grep "Open the UI"
+```
 
 ## How to use it
 

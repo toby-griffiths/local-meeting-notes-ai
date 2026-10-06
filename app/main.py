@@ -275,7 +275,8 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 if _API_TOKEN_GENERATED:
     print("API_TOKEN not set; generated a temporary token for this run.")
     print("Set API_TOKEN in app/.env (or your environment) to keep it stable across restarts.")
-print(f"Open the UI at: http://localhost:8000/#token={API_TOKEN}")
+# flush=True so it shows up immediately in `docker compose logs` (stdout is buffered).
+print(f"Open the UI at: http://localhost:8000/#token={API_TOKEN}", flush=True)
 
 print(f"Loading Whisper model ({WHISPER_MODEL_SIZE})...")
 whisper_model = WhisperModel(WHISPER_MODEL_SIZE, device="cpu", compute_type="int8")
